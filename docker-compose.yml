@@ -1,0 +1,51 @@
+services:
+  api:
+    build:
+      context: ./backend
+    container_name: bittacora_api
+    environment:
+      DATABASE_URL: postgresql://bittacora:bittacora@db:5432/bittacora
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+
+  migrate:
+    build:
+      context: ./backend
+    container_name: bittacora_migrate
+    environment:
+      DATABASE_URL: postgresql://bittacora:bittacora@db:5432/bittacora
+    command: ["python", "scripts/migrate.py"]
+    depends_on:
+      db:
+        condition: service_healthy
+
+  db:
+    image: postgres:16
+    container_name: bittacora_db
+    environment:
+      POSTGRES_DB: bittacora
+      POSTGRES_USER: bittacora
+      POSTGRES_PASSWORD: bittacora
+    ports:
+      - "5432:5432"
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U bittacora -d bittacora"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  redis:
+    image: redis:7
+    container_name: bittacora_redis
+    ports:
+      - "6379:6379"
+
+volumes:
+  pg_data:
